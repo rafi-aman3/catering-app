@@ -11,6 +11,13 @@ A multi-tenant Next.js app to manage office catering, daily lunch polls, custom 
 3. [`.claude/git-workflow.md`](./.claude/git-workflow.md) — branching, commits, PRs, migrations, secrets.
 4. **`node_modules/next/dist/docs/`** — the installed Next.js (16.2.4) is newer than training data. Read the relevant guide for the API you're about to use, *every time*. See `AGENTS.md`.
 
+### Next.js 16 things to remember (the easy traps)
+
+- Middleware was renamed: it lives at the project root as **`proxy.ts`** (not `middleware.ts`). The file conventions doc is `01-app/03-api-reference/.../proxy`. The guide is `01-app/02-guides/16-proxy.md`.
+- App Router code lives at `app/` at the repo root (no `src/` folder in this project). Path alias `@/*` maps to `./*` (see `tsconfig.json`).
+- Tailwind v4 is CSS-first (`@import "tailwindcss"` in `app/globals.css`, `@theme inline { ... }` for tokens). No `tailwind.config.js` by default.
+- Use Server Actions for mutations and route handlers (`route.ts`) only for webhooks / cron / OAuth callbacks.
+
 ## Stack (see `SPEC.md` § 5 for the full list)
 
 Next.js 16 (App Router) · TypeScript · Supabase (Postgres + Auth + Realtime + Storage) · Tailwind v4 + shadcn/ui · TanStack Query + Zustand · React Hook Form + Zod · Vercel + Vercel Cron · Resend · Sentry · PostHog.
