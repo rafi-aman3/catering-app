@@ -1,18 +1,38 @@
 import { NextResponse } from "next/server";
 
-import { env } from "@/lib/env";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  // Importing `env` runs the Zod check; if env is misconfigured, this 500s.
-  // That's the point — /healthz fails loudly when something is broken.
-  void env.NEXT_PUBLIC_SUPABASE_URL;
+  const started = Date.now();
+
+  // Cheapest reachability check: ask Supabase Auth for the current user.
+  // For an unauthenticated /healthz hit we expect user=null, possibly with an
+  // "auth session missing" error — that's fine, it still proves we reached
+  // the Auth server. A thrown exception is a real connectivity problem.
+  try {
+    const supabase = await createClient();
+    await supabase.auth.getUser();
+  } catch (e) {
+    return NextResponse.json(
+      {
+        status: "degraded",
+        env: "loaded",
+        db: "unreachable",
+        error: e instanceof Error ? e.message : String(e),
+        latencyMs: Date.now() - started,
+        time: new Date().toISOString(),
+      },
+      { status: 503 },
+    );
+  }
 
   return NextResponse.json({
     status: "ok",
     env: "loaded",
-    db: "skipped", // wired in M0 phase 3 once the Supabase client lands
+    db: "ok",
+    latencyMs: Date.now() - started,
     time: new Date().toISOString(),
   });
 }
