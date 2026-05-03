@@ -19,7 +19,13 @@ const schema = z.object({
   NEXT_PUBLIC_POSTHOG_HOST: z.url().optional(),
 });
 
-const parsed = schema.safeParse(process.env);
+// Treat empty strings in .env.local (e.g. `RESEND_API_KEY=`) as missing,
+// otherwise `.optional()` doesn't apply and min(1) fires on the empty value.
+const rawEnv = Object.fromEntries(
+  Object.entries(process.env).map(([k, v]) => [k, v === "" ? undefined : v]),
+);
+
+const parsed = schema.safeParse(rawEnv);
 
 if (!parsed.success) {
   const issues = parsed.error.issues
