@@ -47,8 +47,8 @@ Required variables (keep this list in sync with `.env.example`):
 | Variable | Where it comes from | Notes |
 | --- | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API | Public, exposed to the browser |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase → Project Settings → API | Public, exposed to the browser |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API | **Server only.** Never `NEXT_PUBLIC_*`. Used by `/system` routes and server-side migrations only. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Project Settings → API → API keys | Public, exposed to the browser. (Replaces the legacy "anon" key; legacy anon JWT also works.) |
+| `SUPABASE_SECRET_KEY` | Supabase → Project Settings → API → API keys | **Server only.** Never `NEXT_PUBLIC_*`. Used by `/system` routes and server-side admin operations. (Replaces the legacy "service_role" key; legacy service_role JWT also works.) |
 | `RESEND_API_KEY` | <https://resend.com> dashboard | Optional in early dev — emails will no-op without it |
 | `SENTRY_DSN` *(optional)* | Sentry project | Leave blank in dev |
 | `NEXT_PUBLIC_POSTHOG_KEY` *(optional)* | PostHog project | Leave blank in dev |
@@ -70,8 +70,10 @@ Never commit `.env.local`. It is git-ignored. If you add a new env var, update `
 Project Settings → **API**:
 
 - Project URL → `NEXT_PUBLIC_SUPABASE_URL`
-- `anon` `public` key → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `service_role` `secret` key → `SUPABASE_SERVICE_ROLE_KEY`
+- Publishable key (`sb_publishable_…`) → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- Secret key (`sb_secret_…`) → `SUPABASE_SECRET_KEY`
+
+(On legacy projects, the `anon` and `service_role` JWTs map to the same env vars and still work.)
 
 ### 4.3 Apply migrations
 
@@ -111,8 +113,8 @@ pnpm dlx supabase start
 The first run pulls Docker images and takes a few minutes. When it finishes, the CLI prints local URLs and keys — copy them into `.env.local`:
 
 - `API URL` → `NEXT_PUBLIC_SUPABASE_URL`
-- `anon key` → `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `service_role key` → `SUPABASE_SERVICE_ROLE_KEY`
+- `anon key` → `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+- `service_role key` → `SUPABASE_SECRET_KEY`
 
 To stop it later: `pnpm dlx supabase stop`. To reset state: `pnpm dlx supabase db reset`.
 
