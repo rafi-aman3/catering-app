@@ -17,6 +17,7 @@ A multi-tenant Next.js app to manage office catering, daily lunch polls, custom 
 - Middleware was renamed: it lives at the project root as **`proxy.ts`** (not `middleware.ts`). The file conventions doc is `01-app/03-api-reference/.../proxy`. The guide is `01-app/02-guides/16-proxy.md`.
 - App Router code lives at `app/` at the repo root (no `src/` folder in this project). Path alias `@/*` maps to `./*` (see `tsconfig.json`).
 - Tailwind v4 is CSS-first (`@import "tailwindcss"` in `app/globals.css`, `@theme inline { ... }` for tokens). No `tailwind.config.js` by default.
+- shadcn expects the body font to be exposed as `--font-sans` (not `--font-geist-sans`). The Geist Sans `next/font` import in `app/layout.tsx` sets `variable: "--font-sans"` so component styles pick it up.
 - Use Server Actions for mutations and route handlers (`route.ts`) only for webhooks / cron / OAuth callbacks.
 
 ## Stack (see `SPEC.md` § 5 for the full list)
@@ -45,6 +46,23 @@ Package manager: **pnpm**.
 | `lib/supabase/browser.ts` (`createClient`) | Client Components | Reads `process.env.NEXT_PUBLIC_*` directly. |
 | `lib/supabase/admin.ts` (`createAdminClient`) | `/system` routes, scheduled jobs only | Bypasses RLS via the secret key. Never call from a normal user-facing route. |
 | `lib/supabase/proxy.ts` (`updateSession`) | Called from `proxy.ts` at repo root | Refreshes the auth session cookie. **Don't add code between `createServerClient` and `getUser()`** — it desyncs auth state and produces sporadic logouts. |
+
+## Auth routes (M0)
+
+| Path | Purpose |
+| --- | --- |
+| `app/login/page.tsx`, `app/sign-up/page.tsx` | Server Components; forms POST to server actions in `app/auth/actions.ts` (email+password, magic link via `signInWithOtp`, Google OAuth via `signInWithOAuth`). Errors surface via `?error=…` search params so the pages stay server-rendered. |
+| `app/auth/callback/route.ts` | GET handler; exchanges the OAuth / magic-link `code` via `supabase.auth.exchangeCodeForSession`. Failures bounce to `/login?error=…` rather than 500. |
+| `app/auth/check-email/page.tsx` | Post-sign-up / post-magic-link confirmation page. |
+| `app/dashboard/page.tsx` | Auth gate: `supabase.auth.getUser()` → `redirect("/login")` if no user. M0 placeholder; replaced in M1. |
+
+- No client-side Supabase client on the auth surface — `signInWithOAuth` returns a `data.url` the server action `redirect()`s to; password sign-in and magic-link are also server actions. Keeps the auth pages as Server Components.
+- New OAuth providers / callback URLs must also be added in Supabase Studio: **Auth → URL Configuration → Redirect URLs** must include `${NEXT_PUBLIC_APP_URL}/auth/callback`.
+
+## Observability
+
+- `instrumentation.ts` (server) and `instrumentation-client.ts` (client) initialize Sentry only when `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` is set. Missing env = no-op, so the app boots without Sentry configured.
+- PostHog auto-pageview capture **doesn't see App Router client navigations.** `components/posthog-pageview.tsx` is mounted in the root layout and fires `$pageview` on every route change. It's wrapped in `<Suspense>` because `useSearchParams()` would otherwise force the whole tree into dynamic rendering.
 
 ## Database / RLS conventions (hard-learned in M0)
 
